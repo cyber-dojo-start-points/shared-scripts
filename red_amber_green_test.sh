@@ -32,7 +32,7 @@ show_use_short()
   echo ''
   echo '  GIT_REPO_DIR defaults to ${PWD}.'
   echo '  GIT_REPO_DIR must hold a git repo.'
-  echo '  GIT_REPO_DIR/start_point must exist.'
+  echo '  GIT_REPO_DIR/start_point/ must exist.'
   echo ''
 }
 
@@ -44,8 +44,8 @@ show_use_long()
     *) Verifies you can build a start-point image from \${GIT_REPO_DIR}.
        $ cyber-dojo start-point build ... --languages \${GIT_REPO_DIR}
 
-    *) Runs the \${GIT_REPO_DIR}/start_point/ files against the 'image_name'
-       specified in \${GIT_REPO_DIR}/start_point/manifest.json
+    *) Checks the \${GIT_REPO_DIR}/start_point/ files run against the 'image_name'
+       specified in \${GIT_REPO_DIR}/start_point/manifest.json are:
          o) RED   when unmodified
          o) AMBER when '6 * 9' is replaced by '6 * 9sd'
          o) GREEN when '6 * 9' is replaced by '6 * 7'
@@ -368,9 +368,7 @@ ready_filename()
 
 # - - - - - - - - - - - - - - - - - - - - - - -
 # check red->amber->green progression of '6 * 9'
-# Works via a volume-mount (and not via a git-clone) so
-#   o) uncommitted changes in GIT_REPO_DIR will be seen.
-#   o) start_point/options.json can be used if needed.
+# Volume-mount is forstart_point/options.json
 # - - - - - - - - - - - - - - - - - - - - - - -
 assert_traffic_light()
 {
