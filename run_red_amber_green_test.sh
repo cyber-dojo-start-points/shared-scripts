@@ -377,10 +377,16 @@ versioner_env_vars()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-export $(versioner_env_vars)
-exit_zero_if_show_help ${1}
-exit_non_zero_unless_git_installed
-exit_non_zero_unless_docker_installed
-exit_non_zero_unless_good_GIT_REPO_DIR ${1}
-set_git_repo_dir ${1}
-check_red_amber_green
+run_red_amber_green_test()
+{
+  export $(versioner_env_vars)
+  exit_zero_if_show_help "${1}"
+  exit_non_zero_unless_git_installed
+  exit_non_zero_unless_docker_installed
+  exit_non_zero_unless_good_GIT_REPO_DIR "${1}"
+  set_git_repo_dir "${1}"
+  check_red_amber_green
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+run_red_amber_green_test "${1}"
