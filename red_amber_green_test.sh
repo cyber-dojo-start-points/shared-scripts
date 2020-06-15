@@ -89,7 +89,7 @@ exit_non_zero_unless_good_GIT_REPO_DIR()
 # - - - - - - - - - - - - - - - - - - - - - - -
 exit_non_zero_unless_docker_installed()
 {
-  if ! hash docker; then
+  if ! installed docker; then
     stderr 'ERROR: docker is not installed'
     exit 42
   fi
@@ -98,7 +98,7 @@ exit_non_zero_unless_docker_installed()
 # - - - - - - - - - - - - - - - - - - - - - - -
 exit_non_zero_unless_git_installed()
 {
-  if ! hash git 2> /dev/null; then
+  if ! installed git; then
     stderr 'ERROR: git is not installed'
     exit 42
   fi
@@ -107,9 +107,19 @@ exit_non_zero_unless_git_installed()
 # - - - - - - - - - - - - - - - - - - - - - - -
 exit_non_zero_unless_jq_installed()
 {
-  if ! hash jq 2> /dev/null; then
+  if ! installed jq; then
     stderr 'ERROR: jq is not installed'
     exit 42
+  fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+installed()
+{
+  if hash "${1}" 2> /dev/null ; then
+    true
+  else
+    false
   fi
 }
 
