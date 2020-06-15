@@ -87,6 +87,15 @@ exit_non_zero_unless_good_GIT_REPO_DIR()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
+exit_non_zero_unless_docker_installed()
+{
+  if ! hash docker; then
+    stderr 'ERROR: docker is not installed'
+    exit 42
+  fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
 exit_non_zero_unless_git_installed()
 {
   if ! hash git 2> /dev/null; then
@@ -96,10 +105,10 @@ exit_non_zero_unless_git_installed()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-exit_non_zero_unless_docker_installed()
+exit_non_zero_unless_jq_installed()
 {
-  if ! hash docker; then
-    stderr 'ERROR: docker is not installed'
+  if ! hash jq 2> /dev/null; then
+    stderr 'ERROR: jq is not installed'
     exit 42
   fi
 }
@@ -166,6 +175,8 @@ image_name()
 # - - - - - - - - - - - - - - - - - - - - - - -
 check_red_amber_green()
 {
+  echo "Pulling manifest.json's image_name to avoid incorrect timeouts"
+  docker pull $(cat ${GIT_REPO_DIR}/start_point/manifest.json | jq --raw-output .image_name)
   echo 'Checking red|amber|green traffic-lights'
   create_docker_network
   # start runner service needed by image_hiker
@@ -381,8 +392,9 @@ red_amber_green_test()
 {
   export $(versioner_env_vars)
   exit_zero_if_show_help "${1}"
-  exit_non_zero_unless_git_installed
   exit_non_zero_unless_docker_installed
+  exit_non_zero_unless_git_installed
+  exit_non_zero_unless_jq_installed
   exit_non_zero_unless_good_GIT_REPO_DIR "${1}"
   set_git_repo_dir "${1}"
   check_red_amber_green
