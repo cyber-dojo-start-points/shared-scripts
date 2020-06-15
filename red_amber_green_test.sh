@@ -302,8 +302,8 @@ wait_until_ready()
   done
   printf 'FAIL\n'
   echo "${name} not ready after ${max_tries} tries"
-  if [ -f "${READY_FILENAME}" ]; then
-    echo "$(cat "${READY_FILENAME}")"
+  if [ -f "$(ready_filename)" ]; then
+    echo "$(cat "$(ready_filename)")"
   fi
   docker logs ${name}
   exit 42
@@ -377,7 +377,7 @@ versioner_env_vars()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-run_red_amber_green_test()
+red_amber_green_test()
 {
   export $(versioner_env_vars)
   exit_zero_if_show_help "${1}"
@@ -389,4 +389,4 @@ run_red_amber_green_test()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-run_red_amber_green_test "${1}"
+red_amber_green_test "${1}"
