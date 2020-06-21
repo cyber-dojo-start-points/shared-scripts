@@ -151,6 +151,13 @@ set_git_repo_dir()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
+set_git_repo_tag()
+{
+  local -r sha="$(cd ${GIT_REPO_DIR} && git rev-parse HEAD)"
+  GIT_REPO_TAG="${sha:0:7}"
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
 stderr()
 {
   >&2 echo "${1}"
@@ -267,7 +274,7 @@ build_lsp_image()
 {
   local -r name=$(lsp_image_name)
   echo "Building ${name}"
-  "$(cyber_dojo)" start-point create "${name}" --languages "${GIT_REPO_DIR}"
+  "$(cyber_dojo)" start-point build "${name}" --languages "${GIT_REPO_TAG}@${GIT_REPO_DIR}"
 }
 
 remove_lsp_image()
@@ -405,6 +412,7 @@ red_amber_green_test()
   exit_non_zero_unless_jq_installed
   exit_non_zero_unless_good_GIT_REPO_DIR "${1}"
   set_git_repo_dir "${1}"
+  set_git_repo_tag
   check_red_amber_green
 }
 
