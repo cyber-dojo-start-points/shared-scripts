@@ -1,0 +1,8 @@
+
+See if CDL dir-name is always the same as repo-name.
+
+Write script to get all CDL dir-names into a bash array.
+
+Write script to remove max_seconds from manifest.json
+
+Write script to explicitly tag image_name in manifest.json with latest tag
