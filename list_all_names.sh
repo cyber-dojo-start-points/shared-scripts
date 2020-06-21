@@ -18,6 +18,15 @@ do
       echo Different...
       echo " dir:${entry}:"
       echo "repo:${repo_name}:"
+      exit 42
+    fi
+  fi
+
+  if [ -d "${CDL_DIR}/${entry}/start_point" ]; then
+    # See if any repo has image_name with a tag
+    echo "Checking ${entry}'s manifest.json image_name for a tag"
+    if cat "${CDL_DIR}/${entry}/start_point/manifest.json" | jq .image_name | grep --silent ':' ; then
+      echo "${entry}'s image_name has a tag"
     fi
   fi
 done

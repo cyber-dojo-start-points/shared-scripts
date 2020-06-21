@@ -1,8 +1,16 @@
 
-See if CDL dir-name is always the same as repo-name.
+DONE. Write script to get all CDL dir-names into a bash array.
 
-Write script to get all CDL dir-names into a bash array.
+DONE. See if CDL dir-name is always the same as repo-name. It is.
 
-Write script to remove max_seconds from manifest.json
+Can now run script and create all CDSP repos.
+  Then I can update languages-start-points repo to use URLs based on CDSP rather than CDL
+  Then I can delete all start_point/ dirs from CDL repos.
 
-Write script to explicitly tag image_name in manifest.json with latest tag
+
+Write different? script to explicitly tag image_name in manifest.json with latest tag?
+  Use image_manifest_tagger (Ruby + JSON.pretty_generate)
+  But make parsing of image_name more sophisticated?
+    Do any of the not-yet-done CDL repos have image_name with a tag? NO.
+
+Write script to remove max_seconds from manifest.json?
