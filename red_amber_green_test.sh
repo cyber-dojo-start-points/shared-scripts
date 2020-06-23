@@ -192,8 +192,15 @@ image_name()
 # - - - - - - - - - - - - - - - - - - - - - - -
 check_red_amber_green()
 {
-  echo "Pulling manifest.json's image_name to avoid incorrect timeouts"
-  docker pull $(cat ${GIT_REPO_DIR}/start_point/manifest.json | jq --raw-output .image_name)
+  local -r image_name="$(cat ${GIT_REPO_DIR}/start_point/manifest.json | jq --raw-output .image_name)"
+
+  if docker image ls --format "{{.Repository}}:{{.Tag}}" | grep --silent "${image_name}" ; then
+    echo "Found ${image_name} locally so not pulling"
+  else
+    echo "Pulling manifest.json's image_name (to avoid incorrect timeouts)"
+    docker pull "${image_name}"
+  fi
+
   echo 'Checking red|amber|green traffic-lights'
   create_docker_network
   # start runner service needed by image_hiker
