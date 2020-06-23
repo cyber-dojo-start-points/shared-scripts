@@ -281,7 +281,7 @@ build_lsp_image()
 {
   local -r name=$(lsp_image_name)
   echo "Building ${name}"
-  "$(cyber_dojo)" start-point build "${name}" --languages "${GIT_REPO_TAG}@${GIT_REPO_DIR}"
+  "$(cyber_dojo)" start-point create "${name}" --languages "${GIT_REPO_TAG}@${GIT_REPO_DIR}"
 }
 
 remove_lsp_image()
