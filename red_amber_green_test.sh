@@ -42,7 +42,7 @@ show_use_long()
   show_use_short
   cat <<- EOF
     *) Verifies you can build a start-point image from \${GIT_REPO_DIR}.
-       $ cyber-dojo start-point build ... --languages \${GIT_REPO_DIR}
+       $ cyber-dojo start-point create ... --languages \${GIT_REPO_DIR}
 
     *) Checks the \${GIT_REPO_DIR}/start_point/ files run against the 'image_name'
        specified in \${GIT_REPO_DIR}/start_point/manifest.json are:
