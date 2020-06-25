@@ -66,6 +66,28 @@ exit_zero_if_show_help()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
+exit_non_zero_unless_installed()
+{
+  for name in "$@"; do
+    if ! installed "${name}"; then
+      stderr "ERROR: ${name} is not installed"
+      exit 42
+    fi
+  done
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+installed()
+{
+  local -r name="${1}"
+  if hash "${name}" 2> /dev/null ; then
+    true
+  else
+    false
+  fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
 exit_non_zero_unless_good_GIT_REPO_DIR()
 {
   local -r git_repo_dir="${1:-${PWD}}"
@@ -83,43 +105,6 @@ exit_non_zero_unless_good_GIT_REPO_DIR()
     show_use_short
     stderr "ERROR: ${git_repo_dir} is not in a git repo."
     exit 42
-  fi
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - -
-exit_non_zero_unless_docker_installed()
-{
-  if ! installed docker; then
-    stderr 'ERROR: docker is not installed'
-    exit 42
-  fi
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - -
-exit_non_zero_unless_git_installed()
-{
-  if ! installed git; then
-    stderr 'ERROR: git is not installed'
-    exit 42
-  fi
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - -
-exit_non_zero_unless_jq_installed()
-{
-  if ! installed jq; then
-    stderr 'ERROR: jq is not installed'
-    exit 42
-  fi
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - -
-installed()
-{
-  if hash "${1}" 2> /dev/null ; then
-    true
-  else
-    false
   fi
 }
 
@@ -414,9 +399,7 @@ red_amber_green_test()
 {
   export $(versioner_env_vars)
   exit_zero_if_show_help "${1}"
-  exit_non_zero_unless_docker_installed
-  exit_non_zero_unless_git_installed
-  exit_non_zero_unless_jq_installed
+  exit_non_zero_unless_installed docker git jq
   exit_non_zero_unless_good_GIT_REPO_DIR "${1}"
   set_git_repo_dir "${1}"
   set_git_repo_tag
