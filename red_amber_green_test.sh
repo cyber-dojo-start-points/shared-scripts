@@ -165,15 +165,6 @@ cyber_dojo()
   fi
 }
 
-#- - - - - - - - - - - - - - - - - - - - - - -
-image_name()
-{
-  docker run \
-    --rm \
-    --volume "${GIT_REPO_DIR}:/data:ro" \
-    cyberdojofoundation/image_namer
-}
-
 # - - - - - - - - - - - - - - - - - - - - - - -
 check_red_amber_green()
 {
