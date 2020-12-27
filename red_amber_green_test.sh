@@ -226,7 +226,7 @@ start_runner_container()
   echo 'Creating runner service'
   local -r cid=$(docker run \
      --detach \
-     --env NO_PROMETHEUS=true \
+     --env CYBER_DOJO_RUNNER_PORT=4597 \
      --init \
      --name $(runner_container_name) \
      --network $(docker_network_name) \
