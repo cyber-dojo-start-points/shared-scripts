@@ -4,32 +4,50 @@ import os
 import subprocess
 
 
+NO_CONFIG = []
+ALREADY_UPGRADED = []
+NOT_USING_OLD_IMAGE = []
+UPGRADED = []
+
+
 def ci_fix_machine_images():
     repo_names = [item for item in os.listdir(".") if os.path.isdir(item)]
     for repo_name in repo_names:
-        if repo_name not in ["shared-scripts", "python-pytest", "python-behave"]:
-            ci_fix_machine_image_in_repo(repo_name)
+        ci_fix_machine_image_in_repo(repo_name)
 
 
 def ci_fix_machine_image_in_repo(repo_name):
-    edit_config_file(repo_name)
-    git_add(repo_name)
-    git_commit(repo_name)
-    git_push(repo_name)
+    if edit_config_file(repo_name):
+        git_add(repo_name)
+        git_commit(repo_name)
+        git_push(repo_name)
+        UPGRADED.append(repo_name)
+
+
+OLD_IMAGE = "ubuntu-1604:201903-01"
+NEW_IMAGE = "ubuntu-2204:2022.04.2"
 
 
 def edit_config_file(repo_name):
-    with open(filename(repo_name), "r") as f:
+    filename_path = filename(repo_name)
+    if not os.path.isfile(filename_path):
+        NO_CONFIG.append(repo_name)
+        return False
+
+    with open(filename_path, "r") as f:
         old_config = f.read()
-    with open(filename(repo_name), "w") as f:
-        f.write(new_config(old_config))
 
-
-def new_config(old_config):
-    old_image = "ubuntu-1604:201903-01"
-    new_image = "ubuntu-2204:2022.04.2"
-    return old_config.replace(old_image, new_image)
-
+    new_config = old_config.replace(OLD_IMAGE, NEW_IMAGE)
+    if new_config != old_config:
+        with open(filename_path, "w") as f:
+           f.write(new_config)
+        return True
+    elif NEW_IMAGE in old_config:
+        ALREADY_UPGRADED.append(repo_name)
+        return False
+    else:
+        NOT_USING_OLD_IMAGE.append(repo_name)
+        return False
 
 
 def git_add(repo_name):
@@ -54,3 +72,8 @@ def filename(repo_name):
 
 if __name__ == "__main__":
     ci_fix_machine_images()
+    print("No config\n", NO_CONFIG)
+    print("Already upgraded\n", ALREADY_UPGRADED)
+    print("Not using old image\n", NOT_USING_OLD_IMAGE)
+    print("Upgraded\n", UPGRADED)
+
