@@ -358,7 +358,7 @@ ready_filename()
 
 # - - - - - - - - - - - - - - - - - - - - - - -
 # check red->amber->green progression of '6 * 9'
-# Volume-mount is forstart_point/options.json
+# Volume-mount is for start_point/options.json
 # - - - - - - - - - - - - - - - - - - - - - - -
 assert_traffic_light()
 {
@@ -375,7 +375,7 @@ assert_traffic_light()
     --tmpfs /tmp \
     --user nobody \
     --volume ${GIT_REPO_DIR}:${GIT_REPO_DIR}:ro \
-      cyberdojofoundation/image_hiker:latest \
+      ghcr.io/cyber-dojo-tools/image_hiker:latest \
       "${colour}"
 }
 
