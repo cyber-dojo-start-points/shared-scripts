@@ -1,7 +1,7 @@
 #!/bin/bash -Ee
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-# Curl'd and run in CircleCI scripts of all repos
+# Curl'd and run in CI scripts of all repos
 # of the cyber-dojo-start-points github organization.
 #
 # Note: TMP_DIR is off ~ and not /tmp because if we are
@@ -51,7 +51,7 @@ show_use_long()
          o) GREEN when '6 * 9' is replaced by '6 * 7'
        If there is no \${GIT_REPO_DIR}/start_point/ file containing '6 * 9',
        looks for the file \${GIT_REPO_DIR}/start_point/options.json. For example, see:
-       https://github.com/cyber-dojo-languages/nasm-assert/tree/master/start_point
+       https://github.com/cyber-dojo-languages/nasm-assert/tree/main/start_point
 
 EOF
 }
@@ -323,11 +323,7 @@ wait_until_ready()
 # - - - - - - - - - - - - - - - - - - - - - - -
 ip_address()
 {
-  if [ -n "${DOCKER_MACHINE_NAME}" ]; then
-    docker-machine ip ${DOCKER_MACHINE_NAME}
-  else
-    echo localhost
-  fi
+  echo localhost
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
