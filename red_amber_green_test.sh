@@ -115,7 +115,7 @@ set_git_repo_dir()
   local -r abs_src_dir="$(cd "${src_dir}" && pwd)"
   echo "Checking ${abs_src_dir}"
   echo 'Looking for uncommitted changes'
-  if [[ -z $(cd ${abs_src_dir} && git status -s) ]]; then
+  if [[ -z $(cd ${abs_src_dir} && git status --short) ]]; then
     echo 'Found none'
     echo "Using ${abs_src_dir}"
     GIT_REPO_DIR="${abs_src_dir}"
