@@ -5,7 +5,7 @@
 # of the cyber-dojo-start-points github organization.
 #
 # Note: TMP_DIR is off ~ and not /tmp because if we are
-# not running on native Linux (eg on Docker-Toolbox on a Mac)
+# not running on native Linux (eg on a Mac)
 # then we need the TMP_DIR in a location which is visible
 # (as a default volume-mount) inside the VM being used.
 # - - - - - - - - - - - - - - - - - - - - - - -
