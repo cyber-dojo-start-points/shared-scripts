@@ -128,6 +128,7 @@ set_git_repo_dir()
     cd ${url}
     git config user.email 'cyber-dojo-machine-user@cyber-dojo.org'
     git config user.name 'CyberDojoMachineUser'
+    git config commit.gpgsign false 
     git add .
     git commit -m 'Save'
     echo "Using ${url}"
