@@ -41,17 +41,17 @@ show_use_long()
 {
   show_use_short
   cat <<- EOF
-    *) Verifies you can build a start-point image from \${GIT_REPO_DIR}.
-       $ cyber-dojo start-point create ... --languages \${GIT_REPO_DIR}
+  *) Verifies you can build a start-point image from \${GIT_REPO_DIR}.
+      $ cyber-dojo start-point create ... --languages \${GIT_REPO_DIR}
 
-    *) Checks the \${GIT_REPO_DIR}/start_point/ files run against the 'image_name'
-       specified in \${GIT_REPO_DIR}/start_point/manifest.json are:
-         o) RED   when unmodified
-         o) AMBER when '6 * 9' is replaced by '6 * 9sd'
-         o) GREEN when '6 * 9' is replaced by '6 * 7'
-       If there is no \${GIT_REPO_DIR}/start_point/ file containing '6 * 9',
-       looks for the file \${GIT_REPO_DIR}/start_point/options.json. For example, see:
-       https://github.com/cyber-dojo-languages/nasm-assert/tree/main/start_point
+  *) Checks the \${GIT_REPO_DIR}/start_point/ files run against the 'image_name'
+      specified in \${GIT_REPO_DIR}/start_point/manifest.json are:
+        o) RED   when unmodified
+        o) AMBER when '6 * 9' is replaced by '6 * 9sd'
+        o) GREEN when '6 * 9' is replaced by '6 * 7'
+      If there is no \${GIT_REPO_DIR}/start_point/ file containing '6 * 9',
+      looks for the file \${GIT_REPO_DIR}/start_point/options.json. For example, see:
+      https://github.com/cyber-dojo-languages/nasm-assert/tree/main/start_point
 
 EOF
 }
