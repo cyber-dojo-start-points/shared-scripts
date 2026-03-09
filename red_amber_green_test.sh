@@ -2,7 +2,7 @@
 
 # - - - - - - - - - - - - - - - - - - - - - - -
 # Curl'd and run in CI scripts of all repos
-# of the cyber-dojo-start-points github organization.
+# of the cyber-dojo-start-points GitHub organization.
 #
 # Note: TMP_DIR is off ~ and not /tmp because if we are
 # not running on native Linux (eg on a Mac)
@@ -360,6 +360,14 @@ ready_filename()
 assert_traffic_light()
 {
   local -r colour="${1}" # red|amber|green
+
+  # Save JSON output to a file if requests. This is used by
+  # the cyber-dojo/languages-start-points repo to collect the
+  # durations of all start-points.
+  
+  local -r default_filebase="/tmp/assert_traffic_light"
+  local -r filename="${CYBER_DOJO_RAG_RUN_FILE_PREFIX:-${default_filebase}}"  
+
   docker run \
     --env NO_PROMETHEUS=true \
     --env SRC_DIR=${GIT_REPO_DIR} \
@@ -373,7 +381,9 @@ assert_traffic_light()
     --user nobody \
     --volume ${GIT_REPO_DIR}:${GIT_REPO_DIR}:ro \
       ghcr.io/cyber-dojo-tools/image_hiker:latest \
-      "${colour}"
+      "${colour}" | tee "${filename}.${colour}.json"
+
+  cat "${filename}.${colour}.json"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
