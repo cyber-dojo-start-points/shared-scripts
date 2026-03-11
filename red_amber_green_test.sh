@@ -382,8 +382,6 @@ assert_traffic_light()
     --volume ${GIT_REPO_DIR}:${GIT_REPO_DIR}:ro \
       ghcr.io/cyber-dojo-tools/image_hiker:latest \
       "${colour}" | tee "${filename}.${colour}.json"
-
-  cat "${filename}.${colour}.json"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
