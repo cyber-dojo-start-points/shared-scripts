@@ -188,9 +188,16 @@ check_red_amber_green()
   start_lsp_container
   wait_until_ready "$(lsp_container_name)" "${CYBER_DOJO_LANGUAGES_START_POINTS_PORT}"
   # now use image_hiker to check red|amber|green
-  assert_traffic_light red
-  assert_traffic_light amber
-  assert_traffic_light green
+  assert_traffic_light red   | tee /tmp/light.red
+  assert_traffic_light amber | tee /tmp/light.amber
+  assert_traffic_light green | tee /tmp/light.green
+
+  jq --raw-output '.summary.colour' /tmp/light.red
+  jq --raw-output '.summary.result' /tmp/light.red
+  jq --raw-output '.summary.colour' /tmp/light.amber
+  jq --raw-output '.summary.result' /tmp/light.amber
+  jq --raw-output '.summary.colour' /tmp/light.green
+  jq --raw-output '.summary.result' /tmp/light.green
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
