@@ -192,12 +192,20 @@ check_red_amber_green()
   assert_traffic_light amber | tee /tmp/light.amber
   assert_traffic_light green | tee /tmp/light.green
 
-  jq --raw-output '.summary.colour' /tmp/light.red
-  jq --raw-output '.summary.result' /tmp/light.red
-  jq --raw-output '.summary.colour' /tmp/light.amber
-  jq --raw-output '.summary.result' /tmp/light.amber
-  jq --raw-output '.summary.colour' /tmp/light.green
-  jq --raw-output '.summary.result' /tmp/light.green
+  c="$(jq --raw-output '.summary.colour'   /tmp/light.red)"
+  r="$(jq --raw-output '.summary.result'   /tmp/light.red)"
+  d="$(jq --raw-output '.summary.duration' /tmp/light.red)"
+  echo -e "${c}\t${r}\t${d}"
+
+  c="$(jq --raw-output '.summary.colour'   /tmp/light.amber)"
+  r="$(jq --raw-output '.summary.result'   /tmp/light.amber)"
+  d="$(jq --raw-output '.summary.duration' /tmp/light.amber)"
+  echo -e "${c}\t${r}\t${d}"
+
+  c="$(jq --raw-output '.summary.colour'   /tmp/light.green)"
+  r="$(jq --raw-output '.summary.result'   /tmp/light.green)"
+  d="$(jq --raw-output '.summary.duration' /tmp/light.green)"
+  echo -e "${c}\t${r}\t${d}"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
