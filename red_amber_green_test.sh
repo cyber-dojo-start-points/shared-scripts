@@ -188,24 +188,37 @@ check_red_amber_green()
   start_lsp_container
   wait_until_ready "$(lsp_container_name)" "${CYBER_DOJO_LANGUAGES_START_POINTS_PORT}"
   # now use image_hiker to check red|amber|green
+  # Every light runs even when an earlier one fails, so the summary below shows
+  # the whole picture. The exit status at the end is what reports a failure.
   assert_traffic_light red   | tee /tmp/light.red
+  local -r red_status="${PIPESTATUS[0]}"
   assert_traffic_light amber | tee /tmp/light.amber
+  local -r amber_status="${PIPESTATUS[0]}"
   assert_traffic_light green | tee /tmp/light.green
+  local -r green_status="${PIPESTATUS[0]}"
 
-  c="$(jq --raw-output '.summary.colour'   /tmp/light.red)"
-  r="$(jq --raw-output '.summary.result'   /tmp/light.red)"
-  d="$(jq --raw-output '.summary.duration' /tmp/light.red)"
-  echo -e "${c}\t${r}\t${d}"
+  echo -e "light\treached\tresult\tduration"
+  print_traffic_light_summary red
+  print_traffic_light_summary amber
+  print_traffic_light_summary green
 
-  c="$(jq --raw-output '.summary.colour'   /tmp/light.amber)"
-  r="$(jq --raw-output '.summary.result'   /tmp/light.amber)"
-  d="$(jq --raw-output '.summary.duration' /tmp/light.amber)"
-  echo -e "${c}\t${r}\t${d}"
+  if [ "${red_status}" != '0' ] || [ "${amber_status}" != '0' ] || [ "${green_status}" != '0' ]; then
+    stderr "ERROR: red|amber|green statuses were ${red_status}|${amber_status}|${green_status}"
+    exit 42
+  fi
+}
 
-  c="$(jq --raw-output '.summary.colour'   /tmp/light.green)"
-  r="$(jq --raw-output '.summary.result'   /tmp/light.green)"
-  d="$(jq --raw-output '.summary.duration' /tmp/light.green)"
-  echo -e "${c}\t${r}\t${d}"
+# - - - - - - - - - - - - - - - - - - - - - - -
+# summary.colour is the colour the run reached, which is not necessarily the
+# colour asked for, so both are printed.
+print_traffic_light_summary()
+{
+  local -r colour="${1}" # red|amber|green
+  local -r filename="/tmp/light.${colour}"
+  local -r reached="$(jq --raw-output '.summary.colour'    "${filename}")"
+  local -r result="$(jq --raw-output '.summary.result'     "${filename}")"
+  local -r duration="$(jq --raw-output '.summary.duration' "${filename}")"
+  echo -e "${colour}\t${reached}\t${result}\t${duration}"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
@@ -315,7 +328,9 @@ wait_until_ready()
 {
   local -r name="${1}"
   local -r port="${2}"
-  local -r max_tries=20
+  # Overridable from outside for callers that drive many start-points in a row,
+  # where a cold start on a busy machine takes longer than usual.
+  local -r max_tries="${CYBER_DOJO_START_POINT_READY_TRIES:-20}"
   printf "Waiting until ${name} is ready"
   for _ in $(seq ${max_tries})
   do
@@ -328,7 +343,7 @@ wait_until_ready()
     fi
   done
   printf 'FAIL\n'
-  echo "${name} not ready after ${max_tries} tries"
+  echo "${name} not ready after ${max_tries} tries at 0.2s intervals"
   if [ -f "$(ready_filename)" ]; then
     echo "$(cat "$(ready_filename)")"
   fi
@@ -397,6 +412,9 @@ assert_traffic_light()
     --volume ${GIT_REPO_DIR}:${GIT_REPO_DIR}:ro \
       ghcr.io/cyber-dojo-tools/image_hiker:latest \
       "${colour}" | tee "${filename}.${colour}.json"
+  # tee exits zero even when image_hiker exited non-zero, so the status has to
+  # come from PIPESTATUS or a failed light would look like a pass.
+  return "${PIPESTATUS[0]}"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
