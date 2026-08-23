@@ -25,6 +25,39 @@ trap_handler()
 trap trap_handler EXIT
 
 # - - - - - - - - - - - - - - - - - - - - - - -
+# cyberdojo/start-points-base is published for linux/amd64 only, and a build
+# resolving it as a FROM base fails outright on an arm64 host rather than
+# falling back the way 'docker run' does. So the build has to be told which
+# platform to use. That build happens inside the curl'd commander scripts,
+# out of reach of a --platform flag, hence an env-var.
+#
+# It is set on that one command rather than exported for the whole run because
+# an exported value would also reach the multi-arch language image named in
+# manifest.json, and the red|amber|green durations collected by the
+# cyber-dojo/languages-start-points repo are only meaningful when that image
+# runs natively.
+# - - - - - - - - - - - - - - - - - - - - - - -
+
+# True when the host cpu is arm64, eg Apple Silicon.
+host_is_arm64()
+{
+  case "$(uname -m)" in
+    arm64|aarch64) true  ;;
+    *)             false ;;
+  esac
+}
+
+# Echoes an env-var setting that builds the amd64-only base image, or nothing
+# on a host that resolves it natively. Use unquoted after 'env' so it vanishes
+# when empty.
+amd64_platform_env()
+{
+  if host_is_arm64; then
+    echo 'DOCKER_DEFAULT_PLATFORM=linux/amd64'
+  fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
 show_use_short()
 {
   local -r my_name=$(basename ${BASH_SOURCE[0]})
@@ -286,7 +319,8 @@ build_lsp_image()
 {
   local -r name=$(lsp_image_name)
   echo "Building ${name}"
-  "$(cyber_dojo)" start-point create "${name}" --languages "${GIT_REPO_TAG}@${GIT_REPO_DIR}"
+  env $(amd64_platform_env) \
+    "$(cyber_dojo)" start-point create "${name}" --languages "${GIT_REPO_TAG}@${GIT_REPO_DIR}"
 }
 
 remove_lsp_image()
