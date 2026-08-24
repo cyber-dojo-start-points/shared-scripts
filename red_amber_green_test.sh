@@ -38,13 +38,20 @@ trap trap_handler EXIT
 # runs natively.
 # - - - - - - - - - - - - - - - - - - - - - - -
 
+# Echoes the docker platform architecture of the host cpu, eg arm64 on
+# Apple Silicon. Pair it with linux/ to make a --platform argument.
+host_docker_arch()
+{
+  case "$(uname -m)" in
+    arm64|aarch64) echo arm64 ;;
+    *)             echo amd64 ;;
+  esac
+}
+
 # True when the host cpu is arm64, eg Apple Silicon.
 host_is_arm64()
 {
-  case "$(uname -m)" in
-    arm64|aarch64) true  ;;
-    *)             false ;;
-  esac
+  [ "$(host_docker_arch)" = 'arm64' ]
 }
 
 # Echoes an env-var setting that builds the amd64-only base image, or nothing
@@ -204,12 +211,14 @@ check_red_amber_green()
 {
   local -r image_name="$(cat ${GIT_REPO_DIR}/start_point/manifest.json | jq --raw-output .image_name)"
 
-  if docker image ls --format "{{.Repository}}:{{.Tag}}" | grep --silent "${image_name}" ; then
-    echo "Found ${image_name} locally so not pulling"
-  else
-    echo "Pulling manifest.json's image_name (to avoid incorrect timeouts)"
-    docker pull "${image_name}"
-  fi
+  # Naming the platform is what keeps the durations meaningful. 'docker run'
+  # accepts a cached image of any architecture and silently emulates it, so a
+  # wrong-arch copy on disk would inflate every duration. Pulling for the host
+  # architecture on every run replaces such a copy, and costs only a manifest
+  # check once the right one is cached.
+  local -r platform="linux/$(host_docker_arch)"
+  echo "Pulling manifest.json's image_name for ${platform}"
+  docker pull --platform "${platform}" "${image_name}"
 
   echo 'Checking red|amber|green traffic-lights'
   create_docker_network
