@@ -236,6 +236,21 @@ check_red_amber_green()
   start_lsp_container
   wait_until_ready "$(lsp_container_name)" "${CYBER_DOJO_LANGUAGES_START_POINTS_PORT}"
   # now use image_hiker to check red|amber|green
+  # A duration depends on how many runs preceded it. Running one colour six
+  # times against a single runner gave 0.83 0.66 0.59 0.58 0.61 0.62 seconds:
+  # the first costs about 0.23s extra and the second about 0.06s, and from the
+  # third onwards it is flat. Two untimed runs absorb that, so the three timed
+  # below sit on the flat part and measure the language rather than its place
+  # in the order. Their durations are thrown away, and the prefix is overridden
+  # in a subshell so the run file they write cannot be read as a timed one.
+  echo 'Warming up before timing the traffic-lights'
+  local _
+  for _ in 1 2; do
+    ( export CYBER_DOJO_RAG_RUN_FILE_PREFIX=/tmp/warmup_light
+      assert_traffic_light green ) > /dev/null 2>&1 || true
+  done
+  rm -f /tmp/warmup_light.green.json
+
   # Every light runs even when an earlier one fails, so the summary below shows
   # the whole picture. The exit status at the end is what reports a failure.
   assert_traffic_light red   | tee /tmp/light.red
