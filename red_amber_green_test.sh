@@ -211,14 +211,20 @@ check_red_amber_green()
 {
   local -r image_name="$(cat ${GIT_REPO_DIR}/start_point/manifest.json | jq --raw-output .image_name)"
 
-  # Naming the platform is what keeps the durations meaningful. 'docker run'
-  # accepts a cached image of any architecture and silently emulates it, so a
-  # wrong-arch copy on disk would inflate every duration. Pulling for the host
-  # architecture on every run replaces such a copy, and costs only a manifest
-  # check once the right one is cached.
-  local -r platform="linux/$(host_docker_arch)"
-  echo "Pulling manifest.json's image_name for ${platform}"
-  docker pull --platform "${platform}" "${image_name}"
+  # The architecture of the local copy is what decides whether to pull.
+  # 'docker run' accepts a cached image of any architecture and silently
+  # emulates it, so a wrong-arch copy would inflate every duration, and a
+  # pull naming the host platform replaces it. A copy already matching the
+  # host is run as it stands, which keeps a locally built image testable
+  # here and spares every run a trip to the registry.
+  local -r arch="$(host_docker_arch)"
+  local -r local_arch="$(docker image inspect --format '{{.Architecture}}' "${image_name}" 2> /dev/null)"
+  if [ "${local_arch}" == "${arch}" ]; then
+    echo "Found ${image_name} for ${arch} locally so not pulling"
+  else
+    echo "Pulling manifest.json's image_name for linux/${arch}"
+    docker pull --platform "linux/${arch}" "${image_name}"
+  fi
 
   echo 'Checking red|amber|green traffic-lights'
   create_docker_network
