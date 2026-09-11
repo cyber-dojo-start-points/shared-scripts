@@ -17,7 +17,7 @@ coffeescript-jasmine
 csharp-moq
 csharp-nunit
 csharp-specflow
-dee-unittest
+d-unittest
 elixir-exunit
 erlang-eunit
 fortran-funit
