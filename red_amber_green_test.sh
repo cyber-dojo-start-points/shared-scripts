@@ -68,11 +68,15 @@ amd64_platform_env()
 show_use_short()
 {
   local -r my_name=$(basename ${BASH_SOURCE[0]})
-  echo "Use: ${my_name} [GIT_REPO_DIR|-h|--help]"
+  echo "Use: ${my_name} [GIT_REPO_DIR] [--lights-only|--matrix-only] [-h|--help]"
   echo ''
   echo '  GIT_REPO_DIR defaults to ${PWD}.'
   echo '  GIT_REPO_DIR must hold a git repo.'
   echo '  GIT_REPO_DIR/start_point/ must exist.'
+  echo ''
+  echo '  --lights-only  check the three traffic-lights and stop.'
+  echo '  --matrix-only  run only GIT_REPO_DIR/test/, the case matrices.'
+  echo '                 Both groups run when neither flag is given.'
   echo ''
 }
 
@@ -99,9 +103,40 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - -
 exit_zero_if_show_help()
 {
-  if [ "${1}" == '-h' ] || [ "${1}" == '--help' ]; then
-    show_use_long
-    exit 0
+  local arg
+  for arg in "$@"; do
+    if [ "${arg}" == '-h' ] || [ "${arg}" == '--help' ]; then
+      show_use_long
+      exit 0
+    fi
+  done
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+# Reads the command line into SRC_DIR and the two switches saying which
+# groups of checks to run. Both groups run unless a flag says otherwise.
+set_options()
+{
+  SRC_DIR=''
+  CHECK_TRAFFIC_LIGHTS=true
+  RUN_START_POINT_TESTS=true
+  local arg
+  for arg in "$@"; do
+    case "${arg}" in
+      --lights-only) RUN_START_POINT_TESTS=false ;;
+      --matrix-only) CHECK_TRAFFIC_LIGHTS=false ;;
+      -*)
+        show_use_short
+        stderr "ERROR: unknown option ${arg}"
+        exit 42
+        ;;
+      *) SRC_DIR="${arg}" ;;
+    esac
+  done
+  if [ "${CHECK_TRAFFIC_LIGHTS}" == 'false' ] && [ "${RUN_START_POINT_TESTS}" == 'false' ]; then
+    show_use_short
+    stderr 'ERROR: --lights-only and --matrix-only cannot both be given'
+    exit 42
   fi
 }
 
@@ -207,7 +242,10 @@ cyber_dojo()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-check_red_amber_green()
+# Starts the services a kata's files are run through. The traffic-lights and
+# the start-point's own tests both go through them, so they start before
+# either and come down in the trap afterwards.
+start_services()
 {
   local -r image_name="$(cat ${GIT_REPO_DIR}/start_point/manifest.json | jq --raw-output .image_name)"
 
@@ -226,7 +264,6 @@ check_red_amber_green()
     docker pull --platform "linux/${arch}" "${image_name}"
   fi
 
-  echo 'Checking red|amber|green traffic-lights'
   create_docker_network
   # start runner service needed by image_hiker
   start_runner_container
@@ -235,7 +272,14 @@ check_red_amber_green()
   build_lsp_image
   start_lsp_container
   wait_until_ready "$(lsp_container_name)" "${CYBER_DOJO_LANGUAGES_START_POINTS_PORT}"
-  # now use image_hiker to check red|amber|green
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+# Uses image_hiker to check the three traffic-lights, and prints how long
+# each took.
+check_traffic_lights()
+{
+  echo 'Checking red|amber|green traffic-lights'
   # A duration depends on how many runs preceded it. Running one colour six
   # times against a single runner gave 0.83 0.66 0.59 0.58 0.61 0.62 seconds:
   # the first costs about 0.23s extra and the second about 0.06s, and from the
@@ -448,6 +492,38 @@ ready_filename()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
+# Echoes the image that runs a kata's files through the runner and reports
+# the colour they reached.
+image_hiker()
+{
+  echo ghcr.io/cyber-dojo-tools/image_hiker:latest
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+# A start-point can hold tests of its own, in a test/ dir with its own
+# run_tests.sh running shunit2 tests. They cover the cases in
+# _quality_readme.md that the three lights cannot express: a second test
+# file, a file the learner has not finished writing, a test that errors
+# rather than fails. Most start-points have no such dir, and that is not a
+# failure, so their absence is reported and passed over.
+#
+# They run here, after the three lights and before the trap takes the
+# services down, because each case is run through those same services.
+run_start_point_tests()
+{
+  local -r run_tests="${GIT_REPO_DIR}/test/run_tests.sh"
+  if [ ! -f "${run_tests}" ]; then
+    echo 'Found no test/run_tests.sh so there are no start-point tests to run'
+    return 0
+  fi
+  echo 'Running the start-point tests'
+  export CYBER_DOJO_START_POINT_REPO_DIR="${GIT_REPO_DIR}"
+  export CYBER_DOJO_TRAFFIC_LIGHT_NETWORK="$(docker_network_name)"
+  export CYBER_DOJO_IMAGE_HIKER="$(image_hiker)"
+  bash "${run_tests}"
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
 # check red->amber->green progression of '6 * 9'
 # Volume-mount is for start_point/options.json
 # - - - - - - - - - - - - - - - - - - - - - - -
@@ -474,7 +550,7 @@ assert_traffic_light()
     --tmpfs /tmp \
     --user nobody \
     --volume ${GIT_REPO_DIR}:${GIT_REPO_DIR}:ro \
-      ghcr.io/cyber-dojo-tools/image_hiker:latest \
+      "$(image_hiker)" \
       "${colour}" | tee "${filename}.${colour}.json"
   # tee exits zero even when image_hiker exited non-zero, so the status has to
   # come from PIPESTATUS or a failed light would look like a pass.
@@ -490,14 +566,21 @@ versioner_env_vars()
 # - - - - - - - - - - - - - - - - - - - - - - -
 red_amber_green_test()
 {
-  export $(versioner_env_vars)
-  exit_zero_if_show_help "${1}"
+  exit_zero_if_show_help "$@"
+  set_options "$@"
   exit_non_zero_unless_installed docker git jq
-  exit_non_zero_unless_good_GIT_REPO_DIR "${1}"
-  set_git_repo_dir "${1}"
+  export $(versioner_env_vars)
+  exit_non_zero_unless_good_GIT_REPO_DIR "${SRC_DIR}"
+  set_git_repo_dir "${SRC_DIR}"
   set_git_repo_tag
-  check_red_amber_green
+  start_services
+  if [ "${CHECK_TRAFFIC_LIGHTS}" == 'true' ]; then
+    check_traffic_lights
+  fi
+  if [ "${RUN_START_POINT_TESTS}" == 'true' ]; then
+    run_start_point_tests
+  fi
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-red_amber_green_test "${1}"
+red_amber_green_test "$@"
