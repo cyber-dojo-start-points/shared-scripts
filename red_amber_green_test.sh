@@ -501,10 +501,10 @@ image_hiker()
 
 # - - - - - - - - - - - - - - - - - - - - - - -
 # A start-point can hold tests of its own, in a test/ dir with its own
-# run_tests.sh running shunit2 tests. They cover the cases in
-# _quality_readme.md that the three lights cannot express: a second test
-# file, a file the learner has not finished writing, a test that errors
-# rather than fails. Most start-points have no such dir, and that is not a
+# run_tests.sh running shunit2 tests. They cover the cases the three lights
+# cannot express: a second test file, a file the learner has not finished
+# writing, a test that errors rather than fails, a kata that hangs and never
+# reaches a colour at all. Most start-points have no such dir, and that is not a
 # failure, so their absence is reported and passed over.
 #
 # They run here, after the three lights and before the trap takes the
