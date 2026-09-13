@@ -13,6 +13,19 @@
 readonly TMP_DIR=$(mktemp -d ~/tmp.cyber-dojo-start-point-test.XXXXXX)
 remove_tmp_dir() { rm -rf "${TMP_DIR}" > /dev/null; }
 
+# Every name and file this run creates carries this, so several runs can go
+# at once on one machine without fighting over a container name, a network,
+# an image tag, or a file in /tmp. It is lowercased because an image tag
+# cannot hold capitals, and taken from TMP_DIR so it is unique for the same
+# reason TMP_DIR is.
+readonly RUN_ID=$(echo "${TMP_DIR##*.}" | tr '[:upper:]' '[:lower:]')
+
+# Resolved here, before anything cds. A start-point with uncommitted changes
+# is copied and worked on in that copy, and a dir worked out after that cd
+# would miss the companion files sitting beside this script and quietly curl
+# older ones instead.
+readonly MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # - - - - - - - - - - - - - - - - - - - - - - -
 trap_handler()
 {
@@ -267,11 +280,13 @@ start_services()
   create_docker_network
   # start runner service needed by image_hiker
   start_runner_container
-  wait_until_ready "$(runner_container_name)" "${CYBER_DOJO_RUNNER_PORT}"
+  wait_until_ready "$(runner_container_name)" \
+    "$(host_port "$(runner_container_name)" "${CYBER_DOJO_RUNNER_PORT}")"
   # start languages-start-points service needed by image_hiker
   build_lsp_image
   start_lsp_container
-  wait_until_ready "$(lsp_container_name)" "${CYBER_DOJO_LANGUAGES_START_POINTS_PORT}"
+  wait_until_ready "$(lsp_container_name)" \
+    "$(host_port "$(lsp_container_name)" "${CYBER_DOJO_LANGUAGES_START_POINTS_PORT}")"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
@@ -290,18 +305,18 @@ check_traffic_lights()
   echo 'Warming up before timing the traffic-lights'
   local _
   for _ in 1 2; do
-    ( export CYBER_DOJO_RAG_RUN_FILE_PREFIX=/tmp/warmup_light
+    ( export CYBER_DOJO_RAG_RUN_FILE_PREFIX="${TMP_DIR}/warmup_light"
       assert_traffic_light green ) > /dev/null 2>&1 || true
   done
-  rm -f /tmp/warmup_light.green.json
+  rm -f "${TMP_DIR}/warmup_light.green.json"
 
   # Every light runs even when an earlier one fails, so the summary below shows
   # the whole picture. The exit status at the end is what reports a failure.
-  assert_traffic_light red   | tee /tmp/light.red
+  assert_traffic_light red   | tee "${TMP_DIR}/light.red"
   local -r red_status="${PIPESTATUS[0]}"
-  assert_traffic_light amber | tee /tmp/light.amber
+  assert_traffic_light amber | tee "${TMP_DIR}/light.amber"
   local -r amber_status="${PIPESTATUS[0]}"
-  assert_traffic_light green | tee /tmp/light.green
+  assert_traffic_light green | tee "${TMP_DIR}/light.green"
   local -r green_status="${PIPESTATUS[0]}"
 
   echo -e "light\treached\tresult\tduration"
@@ -321,7 +336,7 @@ check_traffic_lights()
 print_traffic_light_summary()
 {
   local -r colour="${1}" # red|amber|green
-  local -r filename="/tmp/light.${colour}"
+  local -r filename="${TMP_DIR}/light.${colour}"
   local -r reached="$(jq --raw-output '.summary.colour'    "${filename}")"
   local -r result="$(jq --raw-output '.summary.result'     "${filename}")"
   local -r duration="$(jq --raw-output '.summary.duration' "${filename}")"
@@ -333,7 +348,7 @@ print_traffic_light_summary()
 # - - - - - - - - - - - - - - - - - - - - - - -
 docker_network_name()
 {
-  echo traffic-light
+  echo "traffic-light-${RUN_ID}"
 }
 
 create_docker_network()
@@ -352,7 +367,7 @@ remove_docker_network()
 # - - - - - - - - - - - - - - - - - - - - - - -
 runner_container_name()
 {
-  echo traffic-light-runner
+  echo "traffic-light-runner-${RUN_ID}"
 }
 
 start_runner_container()
@@ -367,7 +382,8 @@ start_runner_container()
      --name $(runner_container_name) \
      --network $(docker_network_name) \
      --network-alias runner \
-     --publish "${port}:${port}" \
+     --network-alias traffic-light-runner \
+     --publish "${port}" \
      --read-only \
      --restart no \
      --tmpfs /tmp \
@@ -386,7 +402,7 @@ remove_runner_container()
 # - - - - - - - - - - - - - - - - - - - - - - -
 lsp_image_name()
 {
-  echo traffic-light-start-points
+  echo "traffic-light-start-points-${RUN_ID}"
 }
 
 build_lsp_image()
@@ -404,7 +420,7 @@ remove_lsp_image()
 
 lsp_container_name()
 {
-  echo traffic-light-lsp
+  echo "traffic-light-lsp-${RUN_ID}"
 }
 
 start_lsp_container()
@@ -418,7 +434,8 @@ start_lsp_container()
      --name $(lsp_container_name) \
      --network $(docker_network_name) \
      --network-alias languages-start-point \
-     --publish "${port}:${port}" \
+     --network-alias traffic-light-lsp \
+     --publish "${port}" \
      --read-only \
      --restart no \
      --tmpfs /tmp \
@@ -466,6 +483,19 @@ ip_address()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
+# Echoes the host port docker chose for a container's published port.
+#
+# Docker picks it rather than the script naming one, so two runs at once do
+# not fight over a single number. It is asked for rather than remembered
+# because only docker knows which one it picked.
+host_port()
+{
+  local -r name="${1}"
+  local -r port="${2}"
+  docker port "${name}" "${port}" | head -1 | sed 's/.*://'
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
 ready()
 {
   local -r ip_address="${1}"
@@ -488,7 +518,7 @@ ready()
 # - - - - - - - - - - - - - - - - - - - - - - -
 ready_filename()
 {
-  echo /tmp/curl-ready-output
+  echo "${TMP_DIR}/curl-ready-output"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
@@ -506,9 +536,8 @@ image_hiker()
 # from the same branch.
 shared_dir()
 {
-  local -r my_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-  if [ -f "${my_dir}/fixtures_test.sh" ] && [ -f "${my_dir}/shunit2" ]; then
-    echo "${my_dir}"
+  if [ -f "${MY_DIR}/fixtures_test.sh" ] && [ -f "${MY_DIR}/shunit2" ]; then
+    echo "${MY_DIR}"
   else
     curl_shared fixtures_test.sh
     curl_shared shunit2
@@ -570,14 +599,14 @@ assert_traffic_light()
   # the cyber-dojo/languages-start-points repo to collect the
   # durations of all start-points.
   
-  local -r default_filebase="/tmp/assert_traffic_light"
+  local -r default_filebase="${TMP_DIR}/assert_traffic_light"
   local -r filename="${CYBER_DOJO_RAG_RUN_FILE_PREFIX:-${default_filebase}}"  
 
   docker run \
     --env NO_PROMETHEUS=true \
     --env SRC_DIR=${GIT_REPO_DIR} \
     --init \
-    --name traffic-light \
+    --name "traffic-light-hiker-${RUN_ID}" \
     --network $(docker_network_name) \
     --read-only \
     --restart no \

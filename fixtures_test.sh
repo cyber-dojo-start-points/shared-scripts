@@ -152,16 +152,21 @@ assert_max_output_lines()
 }
 
 # Fails unless the runner cut the output short, or left it whole, as
-# "truncated" says. It keeps the first 50K and drops the rest, so a learner
-# printing inside a loop loses the summary line that came after it.
+# "truncated" says. It keeps the first 50K of each stream and drops the rest,
+# so a learner printing inside a loop loses the summary line that came after
+# it.
+#
+# Either stream counts. Which one carries the decisive line belongs to the
+# language rather than to the case: a C assert writes to stderr and a TAP
+# summary to stdout, and the case is the same one either way.
 assert_truncated()
 {
   local -r expected="$(jq --raw-output '.truncated // empty' "${1}")"
   if [ -z "${expected}" ]; then
     return 0
   fi
-  local -r actual="$(hiked '.["cyber-dojo.sh"].stdout.truncated')"
-  assertEquals "stdout-truncated:$(dump_sss)" "${expected}" "${actual}"
+  local -r actual="$(hiked '.["cyber-dojo.sh"].stdout.truncated or .["cyber-dojo.sh"].stderr.truncated')"
+  assertEquals "output-truncated:$(dump_sss)" "${expected}" "${actual}"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
