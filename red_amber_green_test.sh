@@ -75,7 +75,7 @@ show_use_short()
   echo '  GIT_REPO_DIR/start_point/ must exist.'
   echo ''
   echo '  --lights-only  check the three traffic-lights and stop.'
-  echo '  --matrix-only  run only GIT_REPO_DIR/test/, the case matrices.'
+  echo '  --matrix-only  run only GIT_REPO_DIR/test/fixtures/, the cases.'
   echo '                 Both groups run when neither flag is given.'
   echo ''
 }
@@ -119,11 +119,11 @@ set_options()
 {
   SRC_DIR=''
   CHECK_TRAFFIC_LIGHTS=true
-  RUN_START_POINT_TESTS=true
+  RUN_FIXTURE_TESTS=true
   local arg
   for arg in "$@"; do
     case "${arg}" in
-      --lights-only) RUN_START_POINT_TESTS=false ;;
+      --lights-only) RUN_FIXTURE_TESTS=false ;;
       --matrix-only) CHECK_TRAFFIC_LIGHTS=false ;;
       -*)
         show_use_short
@@ -133,7 +133,7 @@ set_options()
       *) SRC_DIR="${arg}" ;;
     esac
   done
-  if [ "${CHECK_TRAFFIC_LIGHTS}" == 'false' ] && [ "${RUN_START_POINT_TESTS}" == 'false' ]; then
+  if [ "${CHECK_TRAFFIC_LIGHTS}" == 'false' ] && [ "${RUN_FIXTURE_TESTS}" == 'false' ]; then
     show_use_short
     stderr 'ERROR: --lights-only and --matrix-only cannot both be given'
     exit 42
@@ -500,27 +500,62 @@ image_hiker()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-# A start-point can hold tests of its own, in a test/ dir with its own
-# run_tests.sh running shunit2 tests. They cover the cases the three lights
-# cannot express: a second test file, a file the learner has not finished
-# writing, a test that errors rather than fails, a kata that hangs and never
-# reaches a colour at all. Most start-points have no such dir, and that is not a
-# failure, so their absence is reported and passed over.
+# Echoes a dir holding this script's companions, fetching them when this
+# script was itself curl'd rather than run from a clone. They sit beside it
+# in the repo, so a clone needs no network and a curl takes the same versions
+# from the same branch.
+shared_dir()
+{
+  local -r my_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+  if [ -f "${my_dir}/fixtures_test.sh" ] && [ -f "${my_dir}/shunit2" ]; then
+    echo "${my_dir}"
+  else
+    curl_shared fixtures_test.sh
+    curl_shared shunit2
+    echo "${TMP_DIR}"
+  fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+curl_shared()
+{
+  local -r name="${1}"
+  local -r github=raw.githubusercontent.com
+  local -r org=cyber-dojo-start-points
+  local -r repo=shared-scripts
+  local -r branch=main
+  local -r url="https://${github}/${org}/${repo}/${branch}/${name}"
+  stderr "Curling ${name} from ${url}"
+  curl --fail --output "${TMP_DIR}/${name}" --silent "${url}"
+  chmod 700 "${TMP_DIR}/${name}"
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - -
+# A start-point can hold cases of its own, one dir per case under
+# test/fixtures/. They cover the cases the three lights cannot express: a
+# second test file, a file the learner has not finished writing, a test that
+# errors rather than fails, a kata that hangs and never reaches a colour at
+# all. Most start-points have no such dir, and that is not a failure, so
+# their absence is reported and passed over.
+#
+# A case holds source and test files only. Everything that runs one lives
+# here, so a better assertion is a better assertion for every start-point at
+# once rather than in 87 copies.
 #
 # They run here, after the three lights and before the trap takes the
 # services down, because each case is run through those same services.
-run_start_point_tests()
+run_fixture_tests()
 {
-  local -r run_tests="${GIT_REPO_DIR}/test/run_tests.sh"
-  if [ ! -f "${run_tests}" ]; then
-    echo 'Found no test/run_tests.sh so there are no start-point tests to run'
+  if [ ! -d "${GIT_REPO_DIR}/test/fixtures" ]; then
+    echo 'Found no test/fixtures/ so there are no cases to run'
     return 0
   fi
-  echo 'Running the start-point tests'
+  echo 'Running the start-point cases'
   export CYBER_DOJO_START_POINT_REPO_DIR="${GIT_REPO_DIR}"
   export CYBER_DOJO_TRAFFIC_LIGHT_NETWORK="$(docker_network_name)"
   export CYBER_DOJO_IMAGE_HIKER="$(image_hiker)"
-  bash "${run_tests}"
+  export CYBER_DOJO_SHARED_DIR="$(shared_dir)"
+  bash "${CYBER_DOJO_SHARED_DIR}/fixtures_test.sh"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
@@ -577,8 +612,8 @@ red_amber_green_test()
   if [ "${CHECK_TRAFFIC_LIGHTS}" == 'true' ]; then
     check_traffic_lights
   fi
-  if [ "${RUN_START_POINT_TESTS}" == 'true' ]; then
-    run_start_point_tests
+  if [ "${RUN_FIXTURE_TESTS}" == 'true' ]; then
+    run_fixture_tests
   fi
 }
 
