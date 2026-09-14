@@ -70,9 +70,13 @@ hiked_output()
 }
 
 # Echoes how many lines of that output matched an extended regex.
+#
+# The pattern is given with --regexp= because a case may well want to match a
+# compiler command line, and a pattern starting with a dash would otherwise be
+# read as options rather than as the thing to look for.
 output_match_count()
 {
-  hiked_output | grep --count --extended-regexp "${1}"
+  hiked_output | grep --count --extended-regexp --regexp="${1}"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -161,10 +165,13 @@ assert_max_output_lines()
 # summary to stdout, and the case is the same one either way.
 assert_truncated()
 {
-  local -r expected="$(jq --raw-output '.truncated // empty' "${1}")"
-  if [ -z "${expected}" ]; then
+  # A case saying nothing about truncation skips the check. Asking whether the
+  # key is there is what tells that apart from a case saying false, which is a
+  # claim worth making: it says the summary the colour rests on survived.
+  if [ "$(jq 'has("truncated")' "${1}")" == 'false' ]; then
     return 0
   fi
+  local -r expected="$(jq --raw-output '.truncated' "${1}")"
   local -r actual="$(hiked '.["cyber-dojo.sh"].stdout.truncated or .["cyber-dojo.sh"].stderr.truncated')"
   assertEquals "output-truncated:$(dump_sss)" "${expected}" "${actual}"
 }

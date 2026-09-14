@@ -453,9 +453,12 @@ wait_until_ready()
 {
   local -r name="${1}"
   local -r port="${2}"
-  # Overridable from outside for callers that drive many start-points in a row,
-  # where a cold start on a busy machine takes longer than usual.
-  local -r max_tries="${CYBER_DOJO_START_POINT_READY_TRIES:-20}"
+  # A ready service answers on the first try, so the ceiling costs nothing when
+  # the machine is quiet. It is what makes the wait survive a machine running
+  # several of these suites at once, where puma is still preloading well after
+  # the few seconds a lone run needs. Overridable from outside for a machine
+  # busier still.
+  local -r max_tries="${CYBER_DOJO_START_POINT_READY_TRIES:-150}"
   printf "Waiting until ${name} is ready"
   for _ in $(seq ${max_tries})
   do
