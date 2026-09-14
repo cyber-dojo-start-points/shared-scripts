@@ -625,9 +625,29 @@ assert_traffic_light()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
-versioner_env_vars()
+# Exports the versions every later step reads, such as which port the runner
+# listens on.
+#
+# The pull reaching docker.io is the one step here that depends on a network
+# nobody owns, and it does fail: an auth read reset, a rate limit. Retrying
+# is what carries a run over that. Exporting an empty answer is the trap
+# worth guarding, because `export` with no arguments succeeds, so set -e lets
+# an empty read through and the run dies far away, saying a container never
+# became ready rather than saying the versions never arrived.
+export_versioner_env_vars()
 {
-  docker run --rm cyberdojo/versioner:latest
+  local env_vars try
+  for try in 1 2 3; do
+    env_vars="$(docker run --rm cyberdojo/versioner:latest)"
+    if [ -n "${env_vars}" ]; then
+      export ${env_vars}
+      return 0
+    fi
+    stderr "WARNING: cyberdojo/versioner:latest gave nothing on try ${try}"
+    sleep 3
+  done
+  stderr 'ERROR: cannot read the versions from cyberdojo/versioner:latest'
+  exit 42
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - -
@@ -636,7 +656,7 @@ red_amber_green_test()
   exit_zero_if_show_help "$@"
   set_options "$@"
   exit_non_zero_unless_installed docker git jq
-  export $(versioner_env_vars)
+  export_versioner_env_vars
   exit_non_zero_unless_good_GIT_REPO_DIR "${SRC_DIR}"
   set_git_repo_dir "${SRC_DIR}"
   set_git_repo_tag

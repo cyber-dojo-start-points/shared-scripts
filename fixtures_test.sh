@@ -74,6 +74,11 @@ hiked_output()
 # The pattern is given with --regexp= because a case may well want to match a
 # compiler command line, and a pattern starting with a dash would otherwise be
 # read as options rather than as the thing to look for.
+#
+# It is an extended regex in the POSIX sense, which has no escape for a tab.
+# What \t means there is left to the implementation: BSD grep reads it as a
+# tab and GNU grep as the letter t, so a pattern using it passes on a mac and
+# fails in CI. Write [[:space:]] for an indented line.
 output_match_count()
 {
   hiked_output | grep --count --extended-regexp --regexp="${1}"
