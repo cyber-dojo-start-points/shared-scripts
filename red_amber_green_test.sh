@@ -375,9 +375,12 @@ start_runner_container()
   local -r image="${CYBER_DOJO_RUNNER_IMAGE}:${CYBER_DOJO_RUNNER_TAG}"
   local -r port="${CYBER_DOJO_RUNNER_PORT}"
   echo 'Creating runner service'
+  # The same spare-container cap as aws-prod, so the durations measured here
+  # are the ones a test-run there gets.
   local -r cid=$(docker run \
      --detach \
      --env CYBER_DOJO_RUNNER_PORT=4597 \
+     --env CYBER_DOJO_RUNNER_SPARES_PER_NODE=16 \
      --init \
      --name $(runner_container_name) \
      --network $(docker_network_name) \
