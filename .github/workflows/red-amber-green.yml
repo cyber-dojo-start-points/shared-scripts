@@ -1,0 +1,43 @@
+name: Red amber green
+
+# Called by every cyber-dojo-start-points repo's main.yml, so a change to how
+# start points are tested is made here once rather than in every repo.
+#
+# The caller grants issues: write. A run started by the propagation App's
+# commit (cyber-dojo-propagate[bot]) has no person to email when it fails, so
+# report-bot-failure opens an issue in the caller's repo instead, and
+# GitHub emails the repo's watchers about it.
+
+on:
+  workflow_call:
+
+jobs:
+
+  red_amber_green_test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: cyber-dojo-start-points/pinned-checkout@main
+
+      - name: Build Language-Start-Point image, test it
+        run: ./run_tests.sh
+
+  report-bot-failure:
+    runs-on: ubuntu-latest
+    needs: [red_amber_green_test]
+    if: >-
+      always() &&
+      needs.red_amber_green_test.result == 'failure' &&
+      endsWith(github.actor, '[bot]') &&
+      github.actor != 'github-actions[bot]'
+    permissions:
+      issues: write
+    steps:
+      - name: Open an issue for the failed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REPOSITORY#*/}: propagated start point failed its tests" \
+            --body "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
