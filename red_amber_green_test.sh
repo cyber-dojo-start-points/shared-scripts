@@ -270,11 +270,20 @@ start_services()
   # here and spares every run a trip to the registry.
   local -r arch="$(host_docker_arch)"
   local -r local_arch="$(docker image inspect --format '{{.Architecture}}' "${image_name}" 2> /dev/null)"
+  #
+  # An image published for one architecture only (nasm's is amd64 alone) has
+  # no variant for this host to pull. A local copy of it, which the caller
+  # pulled for the platform it requires, is then the one to run, emulated.
   if [ "${local_arch}" == "${arch}" ]; then
     echo "Found ${image_name} for ${arch} locally so not pulling"
   else
     echo "Pulling manifest.json's image_name for linux/${arch}"
-    docker pull --platform "linux/${arch}" "${image_name}"
+    if ! docker pull --platform "linux/${arch}" "${image_name}"; then
+      if [ -z "${local_arch}" ]; then
+        exit 42
+      fi
+      echo "No linux/${arch} variant; running the local ${local_arch} copy emulated"
+    fi
   fi
 
   create_docker_network
